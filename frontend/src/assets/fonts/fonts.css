@@ -1,0 +1,31 @@
+@font-face {
+    font-family: 'Ma Shan Zheng';
+    font-style: normal;
+    font-weight: 400;
+    src: url('./files/ma-shan-zheng-chinese-simplified-400-normal.woff2') format('woff2');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Noto Sans SC';
+    font-style: normal;
+    font-weight: 300;
+    src: url('./files/noto-sans-sc-chinese-simplified-300-normal.woff2') format('woff2');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Noto Sans SC';
+    font-style: normal;
+    font-weight: 400;
+    src: url('./files/noto-sans-sc-chinese-simplified-400-normal.woff2') format('woff2');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Noto Sans SC';
+    font-style: normal;
+    font-weight: 700;
+    src: url('./files/noto-sans-sc-chinese-simplified-700-normal.woff2') format('woff2');
+    font-display: swap;
+}
