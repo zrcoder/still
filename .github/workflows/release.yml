@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: darwin/universal
+            ext: ""
+          - os: ubuntu-latest
+            platform: linux
+            ext: ""
+          - os: windows-latest
+            platform: windows
+            ext: .exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build
+        run: wails build -platform ${{ matrix.platform }} -nsis
+
+      - name: Get asset name
+        id: asset
+        run: |
+          if [[ "${{ matrix.platform }}" == *"windows"* ]]; then
+            echo "file=文头字脑_windows_amd64.exe" >> $GITHUB_OUTPUT
+            echo "nsis=文头字脑_windows_amd64-setup.exe" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.platform }}" == *"darwin"* ]]; then
+            echo "file=文头字脑_darwin_all.zip" >> $GITHUB_OUTPUT
+          else
+            echo "file=文头字脑_linux_amd64.zip" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: build/bin/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
