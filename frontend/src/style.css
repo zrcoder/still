@@ -241,7 +241,7 @@ p {
 #collection-sidebar {
   position: fixed;
   right: 0;
-  top: 12%;
+  top: 4%;
   width: 50px;
   background: var(--color-paper-warm);
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
@@ -296,7 +296,7 @@ p {
   align-items: center;
   justify-content: center;
   padding: var(--space-3) var(--space-5);
-  background-color: var(--color-paper);
+  background-color: var(--color-paper-dark);
   box-shadow: var(--shadow-fragment);
   transition:
     transform var(--ease-spring),
@@ -348,71 +348,6 @@ p {
       3% 51%, 1% 26%, 5% 6%);
 }
 
-/* .fragment-stained — water stain marks */
-.fragment-stained {
-  background:
-    radial-gradient(ellipse 40% 30% at 25% 60%, rgba(180, 150, 100, 0.18) 0%, transparent 100%),
-    radial-gradient(ellipse 35% 45% at 75% 30%, rgba(160, 130, 80, 0.12) 0%, transparent 100%),
-    radial-gradient(ellipse 20% 25% at 85% 80%, rgba(200, 170, 120, 0.1) 0%, transparent 100%),
-    var(--color-paper-dark);
-  filter: sepia(0.08) brightness(0.95);
-}
-
-/* .fragment-handwritten — brush calligraphy style */
-.fragment-handwritten {
-  font-family: var(--font-display);
-  font-size: 1.15em;
-  letter-spacing: 0.05em;
-  text-shadow:
-    1px 1px 2px rgba(0, 0, 0, 0.12),
-    -0.5px -0.5px 1px rgba(0, 0, 0, 0.08);
-  clip-path: polygon(2% 5%, 5% 1%, 20% 0%, 40% 2%,
-      60% 1%, 80% 0%, 95% 2%, 99% 5%,
-      100% 20%, 98% 40%, 100% 60%, 99% 80%,
-      100% 95%, 95% 99%, 80% 100%, 60% 98%,
-      40% 100%, 20% 98%, 5% 99%, 2% 95%,
-      0% 80%, 2% 60%, 0% 40%, 2% 20%);
-  background: var(--color-paper);
-  box-shadow:
-    var(--shadow-fragment),
-    inset 0 0 8px rgba(139, 69, 19, 0.06);
-}
-
-/* ── Fragment physical type variants ───────────────────────── */
-
-/* Newspaper scrap */
-.fragment-newspaper {
-  background: var(--color-paper-dark);
-  font-family: var(--font-body);
-  font-size: 0.8em;
-  letter-spacing: 0.02em;
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-4);
-  box-shadow:
-    var(--shadow-fragment),
-    inset 0 0 12px rgba(0, 0, 0, 0.06);
-}
-
-/* Cigarette box */
-.fragment-cigarette-box {
-  background: linear-gradient(135deg, #e8e0d0 0%, #d8d0c0 100%);
-  border-radius: var(--radius-sm);
-  font-size: 0.9em;
-  letter-spacing: 0.03em;
-  border-left: 3px solid var(--color-accent);
-  padding: var(--space-2) var(--space-3);
-}
-
-/* School exercise book */
-.fragment-exercise-book {
-  background: #f0ead8;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  border-left: 4px double #a0a0a0;
-  font-size: 0.85em;
-  padding: var(--space-1) var(--space-4);
-  line-height: 1.8;
-}
-
 /* ── 6. Overlay / Modal ─────────────────────────────────────── */
 .fragment-overlay {
   position: fixed;
@@ -450,11 +385,59 @@ p {
   transform: scale(1) translateY(0);
 }
 
+.fragment-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.fragment-detail__fragment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fragment-detail__fragment .fragment {
+  position: static;
+  transform: none;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.fragment-detail__text {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  letter-spacing: 0.15em;
+  line-height: 1.6;
+  color: var(--color-ink);
+  text-align: center;
+}
+
+.fragment-detail__context {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-ink-light);
+  margin-bottom: var(--space-6);
+  line-height: 1.8;
+  text-align: left;
+  max-width: 24em;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.fragment-detail__fragment .fragment {
+  position: static;
+  transform: none;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
 .fragment-detail__text {
   font-family: var(--font-display);
   font-size: clamp(1.5rem, 4vw, 2.5rem);
   letter-spacing: 0.15em;
-  margin-bottom: var(--space-6);
   line-height: 1.6;
 }
 

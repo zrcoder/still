@@ -31,11 +31,11 @@
                         <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
                     </svg>
                 </button>
-                <button id="restart-btn" aria-label="重新开始">
+                <button id="restart-btn" aria-label="清空">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="1 4 1 10 7 10"></polyline>
-                        <path d="M3.51 15a9 9 0 1 0 .49-3.9"></path>
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                     </svg>
                 </button>
             </div>
@@ -43,14 +43,12 @@
 
         <div class="bottom-panels">
             <section id="narrative">
-                <h2>故事</h2>
                 <div id="narrative-content">
                     <p class="placeholder">……</p>
                 </div>
             </section>
 
             <section id="creation">
-                <h2>创作</h2>
                 <div class="creation-form">
                     <div id="player-text" class="creation-editor" contenteditable="true" data-placeholder="落笔……"></div>
                     <div class="creation-form__actions">
@@ -73,7 +71,10 @@
         <div class="fragment-overlay">
             <div class="fragment-detail">
                 <button class="fragment-detail__close" aria-label="关闭">×</button>
-                <div class="fragment-detail__text"></div>
+                <div class="fragment-detail__header">
+                    <div class="fragment-detail__fragment"></div>
+                    <div class="fragment-detail__text"></div>
+                </div>
                 <div class="fragment-detail__context"></div>
                 <button id="collect-btn">收集</button>
             </div>

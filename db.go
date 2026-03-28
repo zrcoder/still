@@ -41,7 +41,6 @@ func createTables() error {
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS collected (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			type TEXT NOT NULL,
 			title TEXT NOT NULL,
 			full_title TEXT NOT NULL,
 			description TEXT,
@@ -52,8 +51,8 @@ func createTables() error {
 		return err
 	}
 
-	// Index on type for filtering
-	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_collected_type ON collected(type)`)
+	// Index on full_title for filtering
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_collected_full_title ON collected(full_title)`)
 	if err != nil {
 		return err
 	}
@@ -98,9 +97,9 @@ func dbLoadCollected(page, pageSize int) ([]Fragment, int, error) {
 	// Get paginated results
 	offset := (page - 1) * pageSize
 	rows, err := db.Query(`
-		SELECT id, type, title, full_title, description, collected_at 
+		SELECT id, title, full_title, description, collected_at 
 		FROM collected 
-		ORDER BY type ASC 
+		ORDER BY full_title ASC 
 		LIMIT ? OFFSET ?
 	`, pageSize, offset)
 	if err != nil {
@@ -112,7 +111,7 @@ func dbLoadCollected(page, pageSize int) ([]Fragment, int, error) {
 	for rows.Next() {
 		var frag Fragment
 		var collectedAt string
-		if err := rows.Scan(&frag.ID, &frag.Type, &frag.Title, &frag.FullTitle, &frag.Description, &collectedAt); err != nil {
+		if err := rows.Scan(&frag.ID, &frag.Title, &frag.FullTitle, &frag.Description, &collectedAt); err != nil {
 			return nil, 0, fmt.Errorf("scan fragment failed: %w", err)
 		}
 		frag.CollectedAt = collectedAt
@@ -122,15 +121,19 @@ func dbLoadCollected(page, pageSize int) ([]Fragment, int, error) {
 	return fragments, total, nil
 }
 
-func dbSaveFragment(frag Fragment) error {
-	_, err := db.Exec(`
-		INSERT INTO collected (type, title, full_title, description) 
-		VALUES (?, ?, ?, ?)
-	`, frag.Type, frag.Title, frag.FullTitle, frag.Description)
+func dbSaveFragment(frag Fragment) (int64, error) {
+	result, err := db.Exec(`
+		INSERT INTO collected (title, full_title, description) 
+		VALUES (?, ?, ?)
+	`, frag.Title, frag.FullTitle, frag.Description)
 	if err != nil {
-		return fmt.Errorf("insert fragment failed: %w", err)
+		return 0, fmt.Errorf("insert fragment failed: %w", err)
 	}
-	return nil
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("get last insert id failed: %w", err)
+	}
+	return id, nil
 }
 
 func dbClearCollected() error {

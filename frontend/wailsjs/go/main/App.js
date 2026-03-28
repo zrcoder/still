@@ -18,8 +18,8 @@ export function GetFragmentPool() {
   return window['go']['main']['App']['GetFragmentPool']();
 }
 
-export function GetTodayFragments(arg1, arg2) {
-  return window['go']['main']['App']['GetTodayFragments'](arg1, arg2);
+export function GetFragments(arg1, arg2) {
+  return window['go']['main']['App']['GetFragments'](arg1, arg2);
 }
 
 export function LoadCollected(arg1, arg2) {

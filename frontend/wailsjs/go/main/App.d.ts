@@ -10,7 +10,7 @@ export function GetDataDir():Promise<string>;
 
 export function GetFragmentPool():Promise<Array<main.Fragment>>;
 
-export function GetTodayFragments(arg1:number,arg2:number):Promise<main.PaginatedResult>;
+export function GetFragments(arg1:number,arg2:number):Promise<main.PaginatedResult>;
 
 export function LoadCollected(arg1:number,arg2:number):Promise<main.PaginatedResult>;
 
@@ -20,4 +20,4 @@ export function ResetGame():Promise<void>;
 
 export function SaveCreation(arg1:string):Promise<main.Creation>;
 
-export function SaveFragment(arg1:main.Fragment):Promise<void>;
+export function SaveFragment(arg1:main.Fragment):Promise<number>;

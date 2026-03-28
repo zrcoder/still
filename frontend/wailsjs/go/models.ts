@@ -18,7 +18,6 @@ export namespace main {
 	}
 	export class Fragment {
 	    id: number;
-	    type: string;
 	    title: string;
 	    fullTitle: string;
 	    description: string;
@@ -34,7 +33,6 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
-	        this.type = source["type"];
 	        this.title = source["title"];
 	        this.fullTitle = source["fullTitle"];
 	        this.description = source["description"];

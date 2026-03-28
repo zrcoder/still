@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"time"
@@ -10,7 +11,6 @@ import (
 
 type Fragment struct {
 	ID          int64  `json:"id"`
-	Type        string `json:"type"`
 	Title       string `json:"title"`
 	FullTitle   string `json:"fullTitle"`
 	Description string `json:"description"`
@@ -28,11 +28,11 @@ type Creation struct {
 }
 
 type PaginatedResult struct {
-	Items    interface{} `json:"items"`
-	Total    int         `json:"total"`
-	Page     int         `json:"page"`
-	PageSize int         `json:"pageSize"`
-	HasMore  bool        `json:"hasMore"`
+	Items    any  `json:"items"`
+	Total    int  `json:"total"`
+	Page     int  `json:"page"`
+	PageSize int  `json:"pageSize"`
+	HasMore  bool `json:"hasMore"`
 }
 
 type App struct {
@@ -41,40 +41,59 @@ type App struct {
 
 var fragmentPool = []Fragment{
 	{
-		Type:        "cigarette-box",
-		Title:       "廿支装",
-		FullTitle:   "廿支装",
-		Description: "那个字，他念不出来，却记住了它的形状。两根竖线，像两个人并肩站着，中间还连着什么。问了父亲，父亲说那是二十的意思。他点点头，二十支烟，装在一个小小的盒子里。这个字，从此住进了心里。",
-	},
-	{
-		Type:        "newspaper",
-		Title:       "█望",
+		Title:       "希█",
 		FullTitle:   "希望",
-		Description: `路边捡到的，半张纸，字迹模糊得只剩半边。左边那个字残了，看不清是什么。右边的"望"字倒还完整，像一只眼睛，望着他，望了很久。他把纸小心地折好，揣进兜里，带回家反复地看。`,
+		Description: "像眼睛，望着他，望了很久。",
 	},
 	{
-		Type:        "textbook",
+		Title:       "█支装",
+		FullTitle:   "廿支装",
+		Description: "两根竖线，下边相连。父亲说是二十的意思。",
+	},
+	{
 		Title:       "█天",
 		FullTitle:   "春天",
-		Description: "新学期发书那天，油墨香是新的。他把语文课本从头翻到尾，一天之内，全部看完。有个生字不认识，也没去查，就自己猜了一个意思。后来才知道猜错了。但那个错误的意思，他觉得比正确的还要好，像春天里一场模糊的雨。",
+		Description: "新学期发书了，闻着油墨味儿阅读，即使不认识的字都富有美感",
 	},
 	{
-		Type:        "envelope",
-		Title:       "█方",
-		FullTitle:   "远方",
-		Description: `信封已经旧了，寄信人和收信人的名字都褪了色。只剩下"远方"两个字，还有一个模糊的邮戳。他不知道是谁写给谁的信，也不知道那远方究竟有多远。但每次看到这两个字，心里就会有一种说不清的跳动，像有什么东西在等他。`,
-	},
-	{
-		Type:        "wall",
-		Title:       "山水",
+		Title:       "█水",
 		FullTitle:   "山水",
-		Description: "墙上刷的是石灰水，却有人用炭棒在上面画了些笔画。弯弯曲曲的，像山，又像水。他蹲在那面墙前看了很久，想象那些线条的另一头连着什么。",
+		Description: "弯弯曲曲的，像山，又像水。他蹲在那面墙前看了很久。",
 	},
 	{
-		Type:        "bamboo",
-		Title:       "竹子",
+		Title:       "远█",
+		FullTitle:   "远方",
+		Description: "不知道那远方究竟有多远，但心里会有一种说不清的跳动。",
+	},
+	{
+		Title:       "█子",
 		FullTitle:   "竹子",
-		Description: `暑假住在山里亲戚家，屋后有一片竹林。早起看见竹叶上挂着露珠，晶莹的，像字。他采了一片夹进书里，说是要记住这个"竹"字的样子。`,
+		Description: "竹叶上挂着露珠，晶莹的，像字。",
+	},
+	{
+		Title:       "█字",
+		FullTitle:   "识字",
+		Description: "捧着课本，一个字一个字地认，觉得认识一个字就像交到一个朋友。",
+	},
+	{
+		Title:       "█光",
+		FullTitle:   "目光",
+		Description: "老师的目光落在黑板上，他跟着那个目光，看到了一个他从没去过的世界。",
+	},
+	{
+		Title:       "电█院",
+		FullTitle:   "电影院",
+		Description: "只在露天电影里见过。白色的幕布撑在星空下，人影晃动，声音很远。",
+	},
+	{
+		Title:       "█歌",
+		FullTitle:   "山歌",
+		Description: "村里有人唱，他听不懂词儿，只觉得那声音顺着风，传得很远。",
+	},
+	{
+		Title:       "█念",
+		FullTitle:   "信念",
+		Description: "不知道这两个字是什么意思，觉得听起来有力量。",
 	},
 }
 
@@ -117,10 +136,10 @@ func (a *App) GetFragmentPool() []Fragment {
 	return fragmentPool
 }
 
-func (a *App) GetTodayFragments(page, pageSize int) (*PaginatedResult, error) {
-	rows, err := db.Query("SELECT type FROM collected")
+func (a *App) GetFragments(page, pageSize int) (*PaginatedResult, error) {
+	rows, err := db.Query("SELECT full_title FROM collected")
 	if err != nil {
-		return nil, fmt.Errorf("query collected types failed: %w", err)
+		return nil, fmt.Errorf("query collected full_title failed: %w", err)
 	}
 	defer rows.Close()
 
@@ -133,7 +152,7 @@ func (a *App) GetTodayFragments(page, pageSize int) (*PaginatedResult, error) {
 		collectedMap[t] = true
 	}
 
-	seed := getDateSeed()
+	seed := time.Now().UnixNano()
 	rng := newSeededRandom(seed)
 
 	pool := make([]Fragment, len(fragmentPool))
@@ -142,15 +161,15 @@ func (a *App) GetTodayFragments(page, pageSize int) (*PaginatedResult, error) {
 	selected := []Fragment{}
 
 	for len(selected) < 1 && len(pool) > 0 {
-		idx := int(rng() * float64(len(pool)))
+		idx := int(rng.Float64() * float64(len(pool)))
 		frag := pool[idx]
 		pool = append(pool[:idx], pool[idx+1:]...)
-		if collectedMap[frag.Type] {
+		if collectedMap[frag.FullTitle] {
 			continue
 		}
-		frag.PositionX = 5 + rng()*60
-		frag.PositionY = 8 + rng()*75
-		frag.Angle = rng()*30 - 15
+		frag.PositionX = 5 + rng.Float64()*60
+		frag.PositionY = 8 + rng.Float64()*75
+		frag.Angle = rng.Float64()*30 - 15
 		selected = append(selected, frag)
 	}
 
@@ -158,10 +177,7 @@ func (a *App) GetTodayFragments(page, pageSize int) (*PaginatedResult, error) {
 	start := (page - 1) * pageSize
 	end := start + pageSize
 
-	var debugMsg string
 	if start > total {
-		debugMsg = fmt.Sprintf("GetToday: collectedMap size=%d, pool=%d, total=%d, start=%d", len(collectedMap), len(pool), total, start)
-		println(debugMsg)
 		return &PaginatedResult{
 			Items:    []Fragment{},
 			Total:    total,
@@ -175,10 +191,8 @@ func (a *App) GetTodayFragments(page, pageSize int) (*PaginatedResult, error) {
 		end = total
 	}
 
-	debugMsg = fmt.Sprintf("GetToday: collectedMap size=%d, pool=%d, total=%d, returning=%d", len(collectedMap), len(pool), total, len(selected[start:end]))
-	println(debugMsg)
 	if len(selected) == 0 {
-		println("GetToday: WARNING - no fragments selected!")
+		println("GetFragments: WARNING - no fragments selected!")
 	}
 
 	return &PaginatedResult{
@@ -190,20 +204,8 @@ func (a *App) GetTodayFragments(page, pageSize int) (*PaginatedResult, error) {
 	}, nil
 }
 
-func getDateSeed() int64 {
-	d := time.Now()
-	return int64(d.Year()*10000 + int(d.Month())*100 + d.Day())
-}
-
-func newSeededRandom(seed int64) func() float64 {
-	m := int64(0x80000000)
-	a := int64(1103515245)
-	c := int64(12345)
-	state := seed
-	return func() float64 {
-		state = (a*state + c) % m
-		return float64(state) / float64(m)
-	}
+func newSeededRandom(seed int64) *rand.Rand {
+	return rand.New(rand.NewPCG(uint64(seed), uint64(seed)))
 }
 
 func (a *App) LoadCollected(page, pageSize int) (*PaginatedResult, error) {
@@ -239,7 +241,7 @@ func (a *App) LoadCollected(page, pageSize int) (*PaginatedResult, error) {
 	}, nil
 }
 
-func (a *App) SaveFragment(frag Fragment) error {
+func (a *App) SaveFragment(frag Fragment) (int64, error) {
 	return dbSaveFragment(frag)
 }
 

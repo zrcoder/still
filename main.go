@@ -6,6 +6,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
 //go:embed all:frontend/dist
@@ -17,8 +18,9 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:      "文头字脑",
-		Fullscreen: true,
+		Title:  "文头字脑",
+		Width:  1400,
+		Height: 900,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
@@ -26,6 +28,9 @@ func main() {
 		OnStartup:        app.startup,
 		Bind: []any{
 			app,
+		},
+		Mac: &mac.Options{
+			TitleBar: mac.TitleBarDefault(),
 		},
 	})
 

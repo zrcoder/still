@@ -230,7 +230,7 @@ if (muteBtn) {
 // ============================================================
 
 interface Fragment {
-  type: string;
+  id?: number;
   title: string;
   fullTitle: string;
   description: string;
@@ -240,7 +240,7 @@ interface Fragment {
 }
 
 interface CollectFragment {
-  type: string;
+  id: number;
   title: string;
   fullTitle: string;
   description: string;
@@ -251,15 +251,6 @@ interface PaginatedResult<T> {
   hasMore: boolean;
   total: number;
 }
-
-const typeContextMap: Record<string, string> = {
-  'cigarette-box': '一个皱巴巴的烟盒，边缘已经磨得发白。上面印着……',
-  'newspaper': '一张泛黄的旧报纸，边缘被撕裂了，缺了一角。上面印着……',
-  'textbook': '一本旧课本的某一页，书角卷了起来，散发着陈旧的油墨香。上面印着……',
-  'wall': '一面斑驳的土墙，有人用炭棒在上面写了什么。墙上刻着……',
-  'envelope': '一个旧信封，纸张发脆，边缘有些破损。上面的字迹已经……',
-  'bamboo': '一片新鲜的竹叶，叶脉清晰，闻起来有淡淡的清香。上面写着……'
-};
 
 const collectedFragments: CollectFragment[] = [];
 let todayFragments: Fragment[] = [];
@@ -272,7 +263,7 @@ function renderFragments(): void {
 
   todayFragments.forEach((frag) => {
     const el = document.createElement('div');
-    el.className = 'fragment fragment-' + frag.type.replace('_', '-');
+    el.className = 'fragment fragment-torn';
 
     const chars = frag.title.split('');
     el.innerHTML = chars.map((ch) => {
@@ -288,7 +279,7 @@ function renderFragments(): void {
     el.style.position = 'fixed';
     el.style.zIndex = '10';
 
-    el.onclick = () => openFragmentDetail(frag);
+    el.onclick = () => openFragmentDetail(frag, false);
 
     layer.appendChild(el);
   });
@@ -302,6 +293,21 @@ function openFragmentDetail(frag: Fragment): void {
   const detail = document.querySelector('.fragment-detail');
   if (!overlay || !detail) return;
 
+  const fragEl = detail.querySelector('.fragment-detail__fragment');
+  if (fragEl) {
+    fragEl.innerHTML = '';
+    const fragDiv = document.createElement('div');
+    fragDiv.className = 'fragment fragment-torn';
+    const chars = frag.title.split('');
+    fragDiv.innerHTML = chars.map((ch) => {
+      if (ch === '█') {
+        return '<span class="fragment__char fragment__char--worn">█</span>';
+      }
+      return '<span class="fragment__char">' + ch + '</span>';
+    }).join('');
+    fragEl.appendChild(fragDiv);
+  }
+
   const textEl = detail.querySelector('.fragment-detail__text');
   if (textEl) {
     textEl.textContent = frag.fullTitle;
@@ -309,12 +315,16 @@ function openFragmentDetail(frag: Fragment): void {
 
   const contextEl = detail.querySelector('.fragment-detail__context');
   if (contextEl) {
-    contextEl.textContent = typeContextMap[frag.type] || '一个碎片，上面写着……';
+    contextEl.textContent = frag.description;
   }
 
   const collectBtn = document.getElementById('collect-btn');
   if (collectBtn) {
-    collectBtn.onclick = () => collectFragment(frag);
+    const isUncollected = !frag.id;
+    collectBtn.style.display = isUncollected ? 'block' : 'none';
+    if (isUncollected) {
+      collectBtn.onclick = () => collectFragment(frag);
+    }
   }
 
   overlay.classList.add('is-active');
@@ -326,14 +336,15 @@ function collectFragment(frag: Fragment): void {
   if (audioSys) audioSys.ctx && playCollect();
 
   const fragToSave: CollectFragment = {
-    type: frag.type,
+    id: 0,
     title: frag.title,
     fullTitle: frag.fullTitle,
     description: frag.description
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (window as any).go.main.App.SaveFragment(fragToSave).then(() => {
+  (window as any).go.main.App.SaveFragment(fragToSave).then((id: number) => {
+    fragToSave.id = id;
     collectedFragments.push(fragToSave);
     todayFragments = [];
     renderFragments();
@@ -387,7 +398,7 @@ function renderNarrative(): void {
     item.style.cursor = 'pointer';
     item.onclick = () => {
       const tf: Fragment = {
-        type: frag.type,
+        id: frag.id,
         title: frag.title,
         fullTitle: frag.fullTitle,
         description: frag.description,
@@ -435,7 +446,7 @@ function setupRestart(): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).go.main.App.ResetGame()
       .then(() => {
-        console.warn('doRestart: ResetGame done, calling GetTodayFragments');
+        console.warn('doRestart: ResetGame done, calling GetFragments');
         collectedFragments.length = 0;
         todayFragments = [];
         (window as unknown as { _creationPage: number })._creationPage = 1;
@@ -448,10 +459,10 @@ function setupRestart(): void {
         (window as unknown as { _loadCreations: (append: boolean) => void })._loadCreations(false);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (window as any).go.main.App.GetTodayFragments(1, 10) as Promise<PaginatedResult<Fragment>>;
+        return (window as any).go.main.App.GetFragments(1, 10) as Promise<PaginatedResult<Fragment>>;
       })
       .then((result: PaginatedResult<Fragment> | undefined) => {
-        console.warn('doRestart: GetTodayFragments result:', JSON.stringify(result));
+        console.warn('doRestart: GetFragments result:', JSON.stringify(result));
         if (result && result.items && result.items.length > 0) {
           console.warn('doRestart: setting todayFragments, count=', result.items.length);
           todayFragments = result.items;
@@ -503,7 +514,7 @@ async function initFragmentSystem(): Promise<void> {
       collectedFragments.length = 0;
       result.items.forEach((c) => {
         collectedFragments.push({
-          type: c.Type || c.type,
+          id: c.Id || c.id,
           title: c.Title || c.title,
           fullTitle: c.FullTitle || c.fullTitle || c.Title || c.title,
           description: c.Description || c.description
@@ -516,12 +527,12 @@ async function initFragmentSystem(): Promise<void> {
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const today = await (window as any).go.main.App.GetTodayFragments(1, 10) as PaginatedResult<Fragment>;
+    const today = await (window as any).go.main.App.GetFragments(1, 10) as PaginatedResult<Fragment>;
     if (today && today.items && today.items.length > 0) {
       todayFragments = today.items;
     }
   } catch (e) {
-    console.warn('GetTodayFragments failed:', e);
+    console.warn('GetFragments failed:', e);
   }
 
   renderFragments();
