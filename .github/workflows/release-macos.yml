@@ -82,11 +82,11 @@ jobs:
       - name: Rename zip
         working-directory: ./build/bin
         shell: bash
-        run: mv *.zip "文头字脑_${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.zip"
+        run: mv *.zip "still_${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.zip"
 
       - name: Upload release asset (Zip Package)
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.normalise_version.outputs.version }}
-          files: build/bin/文头字脑_${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.zip
+          files: build/bin/still_${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.zip
           token: ${{ secrets.GITHUB_TOKEN }}
