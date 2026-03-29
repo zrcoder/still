@@ -19,7 +19,7 @@ jobs:
             os: "macos-latest"
             artifact: "darwin-universal"
           - platform: "linux/amd64"
-            os: "ubuntu-latest"
+            os: "ubuntu-22.04"
             artifact: "linux-amd64"
           - platform: "windows/amd64"
             os: "windows-latest"
@@ -42,10 +42,10 @@ jobs:
           node-version: '22.x'
 
       - name: Install Linux dependencies
-        if: matrix.build.os == 'ubuntu-latest'
+        if: matrix.build.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
 
       - name: Build wails
         run: |
