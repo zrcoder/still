@@ -59,7 +59,7 @@ still/
 
 ## 3. Go Code Style
 
-**Go Version**: 1.23
+**Go Version**: 1.26
 
 ### Formatting
 - Use `gofmt` (standard formatter) — no custom config

@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -215,13 +217,13 @@ func dbClearCreations() error {
 // Utility
 
 func closeDB() error {
-	if db != nil {
-		return db.Close()
+	if db == nil {
+		return nil
 	}
-	return nil
+	return db.Close()
 }
 
 func dbPathExists(path string) bool {
 	_, err := os.Stat(path)
-	return err == nil
+	return !errors.Is(err, fs.ErrNotExist)
 }
