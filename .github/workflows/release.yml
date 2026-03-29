@@ -54,6 +54,28 @@ jobs:
         env:
           CGO_ENABLED: 1
 
+      - name: Prepare macOS artifact
+        if: matrix.build.os == 'macos-latest'
+        run: |
+          cd build/bin
+          app_name=$(ls *.app | head -1)
+          zip -r "${app_name}.zip" "$app_name"
+          mv "${app_name}.zip" "${{ env.APP_NAME }}-macos.zip"
+
+      - name: Prepare Linux artifact
+        if: matrix.build.os == 'ubuntu-22.04'
+        run: |
+          cd build/bin
+          binary=$(ls still | head -1)
+          mv "$binary" "${{ env.APP_NAME }}-${{ matrix.build.artifact }}"
+
+      - name: Prepare Windows artifact
+        if: matrix.build.os == 'windows-latest'
+        run: |
+          cd build/bin
+          binary=$(ls *.exe | head -1)
+          mv "$binary" "${{ env.APP_NAME }}-${{ matrix.build.artifact }}.exe"
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -70,11 +92,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: artifacts/*
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
