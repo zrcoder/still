@@ -17,10 +17,13 @@ jobs:
         build:
           - platform: "darwin/universal"
             os: "macos-latest"
+            artifact: "darwin-universal"
           - platform: "linux/amd64"
             os: "ubuntu-latest"
+            artifact: "linux-amd64"
           - platform: "windows/amd64"
             os: "windows-latest"
+            artifact: "windows-amd64"
     runs-on: ${{ matrix.build.os }}
     steps:
       - name: Checkout
@@ -42,7 +45,7 @@ jobs:
         if: matrix.build.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
       - name: Build wails
         run: |
@@ -54,5 +57,5 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-${{ matrix.build.platform }}
+          name: ${{ env.APP_NAME }}-${{ matrix.build.artifact }}
           path: build/bin/*
