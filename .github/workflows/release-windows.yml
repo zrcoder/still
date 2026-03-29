@@ -60,6 +60,8 @@ jobs:
       - name: Build frontend assets
         shell: bash
         run: |
+          jq '.info.productVersion = "${{ steps.normalise_version.outputs.version }}"' wails.json > tmp.json
+          mv tmp.json wails.json
           cd frontend
           jq '.version = "${{ steps.normalise_version.outputs.version }}"' package.json > tmp.json
           mv tmp.json package.json
@@ -74,11 +76,11 @@ jobs:
       - name: Create zip
         working-directory: ./build/bin
         shell: bash
-        run: powershell -Command "Compress-Archive -Path still.exe -DestinationPath still-windows-${{ steps.normalise_platform.outputs.tag }}.zip"
+        run: powershell -Command "Compress-Archive -Path still.exe -DestinationPath still_${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.zip"
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.normalise_version.outputs.version }}
-          files: build/bin/still-windows-${{ steps.normalise_platform.outputs.tag }}.zip
+          files: build/bin/still_${{ steps.normalise_version.outputs.version }}_${{ steps.normalise_platform.outputs.tag }}.zip
           token: ${{ secrets.GITHUB_TOKEN }}

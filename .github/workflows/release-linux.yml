@@ -53,6 +53,8 @@ jobs:
       - name: Build frontend assets
         shell: bash
         run: |
+          jq '.info.productVersion = "${{ steps.normalise_version.outputs.version }}"' wails.json > tmp.json
+          mv tmp.json wails.json
           cd frontend
           jq '.version = "${{ steps.normalise_version.outputs.version }}"' package.json > tmp.json
           mv tmp.json package.json
@@ -67,11 +69,11 @@ jobs:
       - name: Compress binary
         working-directory: ./build/bin
         shell: bash
-        run: tar -czvf still-linux-amd64.tar.gz still
+        run: tar -czvf still_${{ steps.normalise_version.outputs.version }}_linux-amd64.tar.gz still
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.normalise_version.outputs.version }}
-          files: build/bin/still-linux-amd64.tar.gz
+          files: build/bin/still_${{ steps.normalise_version.outputs.version }}_linux-amd64.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
