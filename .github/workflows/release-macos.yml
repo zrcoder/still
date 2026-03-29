@@ -14,6 +14,8 @@ jobs:
   release:
     name: Release macOS App
     runs-on: macos-latest
+    permissions:
+      contents: write
     strategy:
       matrix:
         platform:
