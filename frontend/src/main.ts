@@ -392,7 +392,7 @@ function renderNarrative(): void {
 
     const word = document.createElement('p');
     word.className = 'text-vertical narrative-item__word';
-    word.textContent = frag.fullTitle || frag.title;
+    word.textContent = frag.fullTitle;
     item.appendChild(word);
 
     item.style.cursor = 'pointer';
@@ -442,11 +442,9 @@ function setupRestart(): void {
   }
 
   function doRestart(): void {
-    console.warn('doRestart: START');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).go.main.App.ResetGame()
       .then(() => {
-        console.warn('doRestart: ResetGame done, calling GetFragments');
         collectedFragments.length = 0;
         todayFragments = [];
         (window as unknown as { _creationPage: number })._creationPage = 1;
@@ -462,13 +460,9 @@ function setupRestart(): void {
         return (window as any).go.main.App.GetFragments(1, 10) as Promise<PaginatedResult<Fragment>>;
       })
       .then((result: PaginatedResult<Fragment> | undefined) => {
-        console.warn('doRestart: GetFragments result:', JSON.stringify(result));
         if (result && result.items && result.items.length > 0) {
-          console.warn('doRestart: setting todayFragments, count=', result.items.length);
           todayFragments = result.items;
           renderFragments();
-        } else {
-          console.warn('doRestart: no items');
         }
       })
       .catch((e: Error) => {
@@ -514,10 +508,10 @@ async function initFragmentSystem(): Promise<void> {
       collectedFragments.length = 0;
       result.items.forEach((c) => {
         collectedFragments.push({
-          id: c.Id || c.id,
-          title: c.Title || c.title,
-          fullTitle: c.FullTitle || c.fullTitle || c.Title || c.title,
-          description: c.Description || c.description
+          id: c.id,
+          title: c.title,
+          fullTitle: c.fullTitle,
+          description: c.description
         });
       });
     }
@@ -560,7 +554,7 @@ let isLoadingCreations = false;
 interface CreationItem {
   id: string | number;
   content: string;
-  timestamp: string;
+  createdAt: string;
 }
 
 async function loadCreations(append: boolean): Promise<void> {
@@ -752,15 +746,11 @@ function renderCollection(items: CreationItem[]): void {
 
     const time = document.createElement('time');
     time.className = 'creation-item__time';
-    time.textContent = c.timestamp || '';
+    time.textContent = c.createdAt || '';
     item.appendChild(time);
 
     container.appendChild(item);
   });
-}
-
-function renderCreations(items: CreationItem[]): void {
-  renderCollection(items);
 }
 
 async function clearCreations(): Promise<void> {
@@ -783,13 +773,12 @@ function setupLoadMore(): void {
   });
 }
 
-loadCreations(false);
-setupLoadMore();
-
 function initCreationPanel(): void {
   setupEditor();
   setupSubmit();
   setupImageUpload();
+  loadCreations(false);
+  setupLoadMore();
 }
 
 initCreationPanel();
@@ -797,6 +786,6 @@ initCreationPanel();
 (window as unknown as { _creationPage: number })._creationPage = creationPage;
 (window as unknown as { _creationHasMore: boolean })._creationHasMore = creationHasMore;
 (window as unknown as { _updateLoadMoreButton: () => void })._updateLoadMoreButton = updateLoadMoreButton;
-(window as unknown as { _renderCreations: (items: CreationItem[]) => void })._renderCreations = renderCreations;
+(window as unknown as { _renderCollection: (items: CreationItem[]) => void })._renderCollection = renderCollection;
 (window as unknown as { _clearCreations: () => Promise<void> })._clearCreations = clearCreations;
 (window as unknown as { _loadCreations: (append: boolean) => Promise<void> })._loadCreations = loadCreations;
