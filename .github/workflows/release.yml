@@ -1,103 +1,117 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - '*'
-
-env:
-  NODE_OPTIONS: "--max-old-space-size=4096"
-  APP_NAME: "still"
+  release:
+    types: [published]
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        build:
-          - platform: "darwin/universal"
-            os: "macos-latest"
-            artifact: "darwin-universal"
-          - platform: "linux/amd64"
-            os: "ubuntu-22.04"
-            artifact: "linux-amd64"
-          - platform: "windows/amd64"
-            os: "windows-latest"
-            artifact: "windows-amd64"
-    runs-on: ${{ matrix.build.os }}
+  release-macos:
+    name: Release macOS App
+    runs-on: macos-latest
     steps:
-      - name: Checkout
+      - name: Checkout source code
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - name: Set up Go
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.26'
 
-      - name: Set up Node
+      - name: Install wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
 
-      - name: Install Linux dependencies
-        if: matrix.build.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+      - name: Build wails app for macOS
+        run: wails build -platform darwin/universal
 
-      - name: Build wails
+      - name: Create zip
+        working-directory: ./build/bin
+        shell: bash
         run: |
-          go install github.com/wailsapp/wails/v2/cmd/wails@latest
-          wails build -platform ${{ matrix.build.platform }}
-        env:
-          CGO_ENABLED: 1
-
-      - name: Prepare macOS artifact
-        if: matrix.build.os == 'macos-latest'
-        run: |
-          cd build/bin
           app_name=$(ls *.app | head -1)
           zip -r "${app_name}.zip" "$app_name"
-          mv "${app_name}.zip" "${{ env.APP_NAME }}-macos.zip"
 
-      - name: Prepare Linux artifact
-        if: matrix.build.os == 'ubuntu-22.04'
-        run: |
-          cd build/bin
-          binary=$(ls still | head -1)
-          mv "$binary" "${{ env.APP_NAME }}-${{ matrix.build.artifact }}"
-
-      - name: Prepare Windows artifact
-        if: matrix.build.os == 'windows-latest'
-        run: |
-          cd build/bin
-          binary=$(ls *.exe | head -1)
-          mv "$binary" "${{ env.APP_NAME }}-${{ matrix.build.artifact }}.exe"
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: ${{ env.APP_NAME }}-${{ matrix.build.artifact }}
-          path: build/bin/*
+          tag_name: ${{ github.event.release.tag_name }}
+          files: build/bin/*.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  release-linux:
+    name: Release Linux App
+    runs-on: ubuntu-22.04
     steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          files: artifacts/*
-          draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          go-version: '1.26'
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      - name: Install wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+
+      - name: Build wails app for Linux
+        run: |
+          CGO_ENABLED=1 wails build -platform linux/amd64
+
+      - name: Compress binary
+        working-directory: ./build/bin
+        shell: bash
+        run: tar -czvf still-linux-amd64.tar.gz still
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: build/bin/still-linux-amd64.tar.gz
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  release-windows:
+    name: Release Windows App
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Install wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+
+      - name: Build wails app for Windows
+        run: wails build -platform windows/amd64
+
+      - name: Create zip
+        working-directory: ./build/bin
+        shell: bash
+        run: powershell -Command "Compress-Archive -Path still.exe -DestinationPath still-windows-amd64.zip"
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: build/bin/still-windows-amd64.zip
+          token: ${{ secrets.GITHUB_TOKEN }}

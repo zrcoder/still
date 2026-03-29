@@ -333,7 +333,7 @@ function openFragmentDetail(frag: Fragment): void {
 
 function collectFragment(frag: Fragment): void {
   const audioSys = (window as unknown as { _audio: AudioSystem | undefined })._audio;
-  if (audioSys) audioSys.ctx && playCollect();
+  if (audioSys) audioSys.ctx && playSubmit();
 
   const fragToSave: CollectFragment = {
     id: 0,
@@ -626,7 +626,7 @@ function setupSubmit(): void {
 
   btn.addEventListener('click', async () => {
     const audioSys = (window as unknown as { _audio: AudioSystem | undefined })._audio;
-    if (audioSys) audioSys.ctx && playSubmit();
+    if (audioSys) audioSys.ctx && playCollect();
 
     const content = editor.innerHTML.trim();
     if (!content || content === '<br>') {
