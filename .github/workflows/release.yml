@@ -7,6 +7,7 @@ on:
 
 env:
   NODE_OPTIONS: "--max-old-space-size=4096"
+  APP_NAME: "文头字脑"
 
 jobs:
   build:
@@ -14,15 +15,12 @@ jobs:
       fail-fast: false
       matrix:
         build:
-          - name: '文头字脑'
-            platform: 'darwin/universal'
-            os: 'macos-latest'
-          - name: '文头字脑'
-            platform: 'linux/amd64'
-            os: 'ubuntu-latest'
-          - name: '文头字脑'
-            platform: 'windows/amd64'
-            os: 'windows-latest'
+          - platform: "darwin/universal"
+            os: "macos-latest"
+          - platform: "linux/amd64"
+            os: "ubuntu-latest"
+          - platform: "windows/amd64"
+            os: "windows-latest"
     runs-on: ${{ matrix.build.os }}
     steps:
       - name: Checkout
@@ -38,17 +36,17 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22.x'
 
-      - name: Build with Wails
+      - name: Build wails
         run: |
           go install github.com/wailsapp/wails/v2/cmd/wails@latest
-          wails build -platform ${{ matrix.build.platform }} -name "${{ matrix.build.name }}"
+          wails build -platform ${{ matrix.build.platform }} -nsis
         env:
           CGO_ENABLED: 1
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.build.name }}-${{ matrix.build.platform }}
+          name: ${{ env.APP_NAME }}-${{ matrix.build.platform }}
           path: build/bin/*
