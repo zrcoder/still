@@ -1,18 +1,39 @@
-name: Release macOS
+name: Release macOS App
 
 on:
   release:
-    types: [published]
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag'
+        required: true
+        default: '1.0.0'
 
 jobs:
-  release-macos:
+  release:
     name: Release macOS App
     runs-on: macos-latest
-    permissions:
-      contents: write
+    strategy:
+      matrix:
+        platform:
+          - darwin/amd64
+          - darwin/arm64
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
+
+      - name: Normalise version tag
+        id: normalise_version
+        shell: bash
+        run: |
+          if [ "${{ github.event.release.tag_name }}" == "" ]; then
+            version=$(echo ${{ github.event.inputs.tag }} | sed -e 's/v//g')
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          else
+            version=$(echo ${{ github.event.release.tag_name }} | sed -e 's/v//g')
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -27,28 +48,31 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: Build wails app for macOS
-        run: wails build -platform darwin/universal
-
-      - name: Find app bundle
+      - name: Build frontend assets
         shell: bash
         run: |
-          find . -name "*.app" -type d 2>/dev/null
+          cd frontend
+          jq '.version = "${{ steps.normalise_version.outputs.version }}"' package.json > tmp.json
+          mv tmp.json package.json
+          npm install
+
+      - name: Build wails app for macOS
+        shell: bash
+        run: |
+          CGO_ENABLED=1 wails build -platform ${{ matrix.platform }} \
+          -ldflags "-X main.version=${{ steps.normalise_version.outputs.version }}"
 
       - name: Create zip
         shell: bash
         run: |
           app_path=$(find . -name "*.app" -type d 2>/dev/null | head -1)
-          if [ -z "$app_path" ]; then
-            echo "No .app bundle found!"
-            exit 1
-          fi
+          app_dir=$(dirname "$app_path")
           app_name=$(basename "$app_path")
-          zip -r "${app_name}.zip" "$app_name"
+          cd "$app_dir" && zip -r "${app_name}.zip" "$app_name"
 
-      - name: Upload to Release
+      - name: Upload release asset (Zip Package)
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.event.release.tag_name }}
-          files: "*.zip"
+          tag_name: v${{ steps.normalise_version.outputs.version }}
+          files: build/bin/*.zip
           token: ${{ secrets.GITHUB_TOKEN }}
