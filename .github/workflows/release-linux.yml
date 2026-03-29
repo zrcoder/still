@@ -8,6 +8,8 @@ jobs:
   release-linux:
     name: Release Linux App
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
