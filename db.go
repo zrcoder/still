@@ -2,10 +2,7 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
 	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -55,12 +52,6 @@ func createTables() error {
 
 	// Index on full_title for filtering
 	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_collected_full_title ON collected(full_title)`)
-	if err != nil {
-		return err
-	}
-
-	// Index on collected_at for ordering
-	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_collected_date ON collected(collected_at)`)
 	if err != nil {
 		return err
 	}
@@ -186,23 +177,15 @@ func dbLoadCreations(page, pageSize int) ([]Creation, int, error) {
 }
 
 func dbSaveCreation(content string) (int64, string, error) {
-	result, err := db.Exec("INSERT INTO creations (content) VALUES (?)", content)
+	var id int64
+	var createdAt string
+	err := db.QueryRow(
+		"INSERT INTO creations (content) VALUES (?) RETURNING id, created_at",
+		content,
+	).Scan(&id, &createdAt)
 	if err != nil {
 		return 0, "", fmt.Errorf("insert creation failed: %w", err)
 	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, "", fmt.Errorf("get last insert id failed: %w", err)
-	}
-
-	// Get the created_at timestamp
-	var createdAt string
-	err = db.QueryRow("SELECT created_at FROM creations WHERE id = ?", id).Scan(&createdAt)
-	if err != nil {
-		return 0, "", fmt.Errorf("get created_at failed: %w", err)
-	}
-
 	return id, createdAt, nil
 }
 
@@ -221,9 +204,4 @@ func closeDB() error {
 		return nil
 	}
 	return db.Close()
-}
-
-func dbPathExists(path string) bool {
-	_, err := os.Stat(path)
-	return !errors.Is(err, fs.ErrNotExist)
 }

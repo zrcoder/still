@@ -40,6 +40,14 @@ type App struct {
 	ctx context.Context
 }
 
+func paginatedSlice[T any](items []T, total, page, pageSize int) *PaginatedResult {
+	start := (page - 1) * pageSize
+	if start >= total {
+		return &PaginatedResult{Items: []T{}, Total: total, Page: page, PageSize: pageSize, HasMore: false}
+	}
+	return &PaginatedResult{Items: items, Total: total, Page: page, PageSize: pageSize, HasMore: start+len(items) < total}
+}
+
 var fragmentPool = []Fragment{
 	{
 		Title:       "希█",
@@ -169,35 +177,10 @@ func (a *App) GetFragments(page, pageSize int) (*PaginatedResult, error) {
 		selected = append(selected, frag)
 	}
 
-	total := len(selected)
-	start := (page - 1) * pageSize
-	end := start + pageSize
-
-	if start > total {
-		return &PaginatedResult{
-			Items:    []Fragment{},
-			Total:    total,
-			Page:     page,
-			PageSize: pageSize,
-			HasMore:  false,
-		}, nil
-	}
-
-	if end > total {
-		end = total
-	}
-
 	if len(selected) == 0 {
 		println("GetFragments: WARNING - no fragments selected!")
 	}
-
-	return &PaginatedResult{
-		Items:    selected[start:end],
-		Total:    total,
-		Page:     page,
-		PageSize: pageSize,
-		HasMore:  end < total,
-	}, nil
+	return paginatedSlice(selected, len(selected), page, pageSize), nil
 }
 
 func newSeededRandom(seed int64) *rand.Rand {
@@ -209,32 +192,7 @@ func (a *App) LoadCollected(page, pageSize int) (*PaginatedResult, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	totalCount := total
-	start := (page - 1) * pageSize
-	end := start + pageSize
-
-	if start > totalCount {
-		return &PaginatedResult{
-			Items:    []Fragment{},
-			Total:    totalCount,
-			Page:     page,
-			PageSize: pageSize,
-			HasMore:  false,
-		}, nil
-	}
-
-	if end > totalCount {
-		end = totalCount
-	}
-
-	return &PaginatedResult{
-		Items:    fragments,
-		Total:    totalCount,
-		Page:     page,
-		PageSize: pageSize,
-		HasMore:  end < totalCount,
-	}, nil
+	return paginatedSlice(fragments, total, page, pageSize), nil
 }
 
 func (a *App) SaveFragment(frag Fragment) (int64, error) {
@@ -246,32 +204,7 @@ func (a *App) LoadCreations(page, pageSize int) (*PaginatedResult, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	totalCount := total
-	start := (page - 1) * pageSize
-	end := start + pageSize
-
-	if start > totalCount {
-		return &PaginatedResult{
-			Items:    []Creation{},
-			Total:    totalCount,
-			Page:     page,
-			PageSize: pageSize,
-			HasMore:  false,
-		}, nil
-	}
-
-	if end > totalCount {
-		end = totalCount
-	}
-
-	return &PaginatedResult{
-		Items:    creations,
-		Total:    totalCount,
-		Page:     page,
-		PageSize: pageSize,
-		HasMore:  end < totalCount,
-	}, nil
+	return paginatedSlice(creations, total, page, pageSize), nil
 }
 
 func (a *App) SaveCreation(content string) (*Creation, error) {

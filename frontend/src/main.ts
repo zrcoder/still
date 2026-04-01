@@ -6,7 +6,6 @@
 
 const AMBIENT_VOL = 0.15;
 const SFX_VOL = 0.5;
-const MUTE_KEY = 'wentouzi_muted';
 
 interface AudioSystem {
   ctx: AudioContext | null;
@@ -255,6 +254,14 @@ interface PaginatedResult<T> {
 const collectedFragments: CollectFragment[] = [];
 let todayFragments: Fragment[] = [];
 
+function buildFragmentHTML(title: string): string {
+  return title.split('').map((ch) =>
+    ch === '█'
+      ? '<span class="fragment__char fragment__char--worn">█</span>'
+      : '<span class="fragment__char">' + ch + '</span>'
+  ).join('');
+}
+
 function renderFragments(): void {
   const layer = document.getElementById('fragments-layer');
   if (!layer) return;
@@ -264,14 +271,7 @@ function renderFragments(): void {
   todayFragments.forEach((frag) => {
     const el = document.createElement('div');
     el.className = 'fragment fragment-torn';
-
-    const chars = frag.title.split('');
-    el.innerHTML = chars.map((ch) => {
-      if (ch === '█') {
-        return '<span class="fragment__char fragment__char--worn">█</span>';
-      }
-      return '<span class="fragment__char">' + ch + '</span>';
-    }).join('');
+    el.innerHTML = buildFragmentHTML(frag.title);
 
     el.style.left = frag.positionX.toFixed(1) + '%';
     el.style.top = frag.positionY.toFixed(1) + '%';
@@ -279,7 +279,7 @@ function renderFragments(): void {
     el.style.position = 'fixed';
     el.style.zIndex = '10';
 
-    el.onclick = () => openFragmentDetail(frag, false);
+    el.onclick = () => openFragmentDetail(frag);
 
     layer.appendChild(el);
   });
@@ -298,13 +298,7 @@ function openFragmentDetail(frag: Fragment): void {
     fragEl.innerHTML = '';
     const fragDiv = document.createElement('div');
     fragDiv.className = 'fragment fragment-torn';
-    const chars = frag.title.split('');
-    fragDiv.innerHTML = chars.map((ch) => {
-      if (ch === '█') {
-        return '<span class="fragment__char fragment__char--worn">█</span>';
-      }
-      return '<span class="fragment__char">' + ch + '</span>';
-    }).join('');
+    fragDiv.innerHTML = buildFragmentHTML(frag.title);
     fragEl.appendChild(fragDiv);
   }
 
@@ -448,13 +442,11 @@ function setupRestart(): void {
         collectedFragments.length = 0;
         todayFragments = [];
         (window as unknown as { _creationPage: number })._creationPage = 1;
-        (window as unknown as { _creationHasMore: boolean })._creationHasMore = false;
 
         const collectionContainer = document.getElementById('collection');
         if (collectionContainer) collectionContainer.innerHTML = '';
-        (window as unknown as { _updateLoadMoreButton: () => void })._updateLoadMoreButton();
         renderNarrative();
-        (window as unknown as { _loadCreations: (append: boolean) => void })._loadCreations(false);
+        (window as unknown as { _loadCreations: (page: number) => Promise<void> })._loadCreations(1);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (window as any).go.main.App.GetFragments(1, 10) as Promise<PaginatedResult<Fragment>>;
@@ -548,31 +540,27 @@ const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_DIMENSION = 800;
 const PAGE_SIZE = 5;
 let creationPage = 1;
-let creationHasMore = false;
+let totalCreations = 0;
 let isLoadingCreations = false;
 
 interface CreationItem {
-  id: string | number;
+  id: number;
   content: string;
-  createdAt: string;
 }
 
-async function loadCreations(append: boolean): Promise<void> {
+async function loadCreations(page: number): Promise<void> {
   if (isLoadingCreations) return;
   isLoadingCreations = true;
 
-  if (!append) {
-    creationPage = 1;
-  }
+  creationPage = page;
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (window as any).go.main.App.LoadCreations(creationPage, PAGE_SIZE) as PaginatedResult<CreationItem>;
+    const result = await (window as any).go.main.App.LoadCreations(page, PAGE_SIZE) as PaginatedResult<CreationItem>;
     if (result && result.items) {
-      creationHasMore = result.hasMore;
-      creationPage++;
-      renderCollection(result.items);
-      updateLoadMoreButton();
+      totalCreations = result.total || 0;
+      renderCollection(result.items, true);
+      renderPagination();
     }
   } catch (e) {
     console.warn('Failed to load creations:', e);
@@ -581,10 +569,8 @@ async function loadCreations(append: boolean): Promise<void> {
   isLoadingCreations = false;
 }
 
-function updateLoadMoreButton(): void {
-  const btn = document.getElementById('load-more-creations');
-  if (!btn) return;
-  (btn as HTMLElement).style.display = creationHasMore ? 'block' : 'none';
+function totalPages(): number {
+  return Math.ceil(totalCreations / PAGE_SIZE) || 1;
 }
 
 function setupEditor(): void {
@@ -593,30 +579,16 @@ function setupEditor(): void {
   const btn = document.getElementById('submit-text');
   if (!editor || !counter || !btn) return;
 
-  function updateUI(): void {
+  function updateState(): void {
     const len = editor.textContent?.length || 0;
     counter.textContent = Math.min(len, CHAR_LIMIT) + '/' + CHAR_LIMIT;
     counter.style.color = len > CHAR_LIMIT ? 'var(--color-accent)' : '';
-    const hasContent = editor.textContent?.trim() || editor.querySelector('img');
-    (btn as HTMLButtonElement).disabled = !hasContent;
-  }
-
-  editor.addEventListener('input', updateUI);
-  updateUI();
-}
-
-function setupSubmit(): void {
-  const btn = document.getElementById('submit-text');
-  const editor = document.getElementById('player-text');
-  if (!btn || !editor) return;
-
-  function updateSubmitButton(): void {
     const content = editor.innerHTML.trim();
     (btn as HTMLButtonElement).disabled = !content || content === '<br>';
   }
 
-  editor.addEventListener('input', updateSubmitButton);
-  updateSubmitButton();
+  editor.addEventListener('input', updateState);
+  updateState();
 
   btn.addEventListener('click', async () => {
     const audioSys = (window as unknown as { _audio: AudioSystem | undefined })._audio;
@@ -631,16 +603,15 @@ function setupSubmit(): void {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await (window as any).go.main.App.SaveCreation(content) as boolean;
       if (result) {
-        loadCreations(false);
+        loadCreations(1);
       }
     } catch (e) {
       console.warn('SaveCreation failed:', e);
     }
 
     editor.innerHTML = '';
-    const counter = document.getElementById('char-count');
-    if (counter) counter.textContent = '0/' + CHAR_LIMIT;
-    updateSubmitButton();
+    counter.textContent = '0/' + CHAR_LIMIT;
+    updateState();
   });
 }
 
@@ -718,24 +689,19 @@ function compressImage(file: File): Promise<string> {
   });
 }
 
-function renderCollection(items: CreationItem[]): void {
+function renderCollection(items: CreationItem[], clear: boolean): void {
   const container = document.getElementById('collection');
   if (!container) return;
 
-  if (!items || items.length === 0) {
+  if (clear) {
     container.innerHTML = '';
-    updateLoadMoreButton();
+  }
+
+  if (!items || items.length === 0) {
     return;
   }
 
-  const existingIds = new Set<string>();
-  container.querySelectorAll('.creation-item').forEach((el) => {
-    existingIds.add(el.dataset.id || '');
-  });
-
   items.forEach((c) => {
-    if (existingIds.has(String(c.id))) return;
-
     const item = document.createElement('div');
     item.className = 'creation-item fade-in';
     item.dataset.id = String(c.id);
@@ -743,11 +709,6 @@ function renderCollection(items: CreationItem[]): void {
     if (c.content) {
       item.innerHTML = c.content;
     }
-
-    const time = document.createElement('time');
-    time.className = 'creation-item__time';
-    time.textContent = c.createdAt || '';
-    item.appendChild(time);
 
     container.appendChild(item);
   });
@@ -761,31 +722,39 @@ async function clearCreations(): Promise<void> {
     console.warn('ClearCreations failed:', e);
   }
   creationPage = 1;
-  creationHasMore = false;
-  loadCreations(false);
+  totalCreations = 0;
+  loadCreations(1);
 }
 
-function setupLoadMore(): void {
-  const btn = document.getElementById('load-more-creations');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    loadCreations(true);
-  });
+function renderPagination(): void {
+  const container = document.getElementById('creation-pagination');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  const pages = totalPages();
+  if (pages <= 1) return;
+
+  for (let i = 1; i <= pages; i++) {
+    const start = (i - 1) * PAGE_SIZE + 1;
+    const end = Math.min(i * PAGE_SIZE, totalCreations);
+    const btn = document.createElement('button');
+    btn.className = 'pagination-btn' + (i === creationPage ? ' is-active' : '');
+    btn.textContent = `${start}-${end}`;
+    btn.addEventListener('click', () => loadCreations(i));
+    container.appendChild(btn);
+  }
 }
 
 function initCreationPanel(): void {
   setupEditor();
-  setupSubmit();
   setupImageUpload();
-  loadCreations(false);
-  setupLoadMore();
+  loadCreations(1);
 }
 
 initCreationPanel();
 
 (window as unknown as { _creationPage: number })._creationPage = creationPage;
-(window as unknown as { _creationHasMore: boolean })._creationHasMore = creationHasMore;
-(window as unknown as { _updateLoadMoreButton: () => void })._updateLoadMoreButton = updateLoadMoreButton;
-(window as unknown as { _renderCollection: (items: CreationItem[]) => void })._renderCollection = renderCollection;
+(window as unknown as { _loadCreations: (page: number) => Promise<void> })._loadCreations = loadCreations;
 (window as unknown as { _clearCreations: () => Promise<void> })._clearCreations = clearCreations;
-(window as unknown as { _loadCreations: (append: boolean) => Promise<void> })._loadCreations = loadCreations;
+(window as unknown as { _renderCollection: (items: CreationItem[], clear: boolean) => void })._renderCollection = renderCollection;
