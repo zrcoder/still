@@ -206,7 +206,7 @@ p {
 .game-header__subtitle {
   font-size: var(--space-4);
   color: var(--color-ink-light);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.08em;
 }
 
