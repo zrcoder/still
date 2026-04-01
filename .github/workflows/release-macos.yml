@@ -52,10 +52,8 @@ jobs:
       - name: Install wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.x'
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Build frontend assets
         shell: bash
@@ -63,7 +61,7 @@ jobs:
           cd frontend
           jq '.version = "${{ steps.normalise_version.outputs.version }}"' package.json > tmp.json
           mv tmp.json package.json
-          npm install
+          bun install
 
       - name: Build wails app for macOS
         shell: bash
