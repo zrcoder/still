@@ -1,4 +1,4 @@
-module still
+module github.com/zrcoder/still
 
 go 1.26
 

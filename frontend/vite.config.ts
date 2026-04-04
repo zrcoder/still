@@ -15,7 +15,7 @@ export default defineConfig({
       },
       mangle: {
         properties: false,
-        reserved: ['_audio', '_renderNarrative', '_creationPage', '_renderCollection', '_clearCreations', '_loadCreations'],
+        reserved: ['_audio', '_renderNarrative', '_creationPage', '_renderCollection', '_loadCreations'],
       },
       format: {
         comments: false,

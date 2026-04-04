@@ -1,16 +1,18 @@
-package main
+package db
 
 import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
 
+	"github.com/zrcoder/still/model"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var db *sql.DB
 
-func initDB(dataDir string) error {
+func Init(dataDir string) error {
 	dbPath := filepath.Join(dataDir, "still.db")
 
 	dbInstance, err := sql.Open("sqlite3", "file:"+dbPath+"?_busy_timeout=5000&_foreign_keys=ON")
@@ -79,42 +81,50 @@ func createTables() error {
 
 // Collected Fragment operations
 
-func dbLoadCollected(page, pageSize int) ([]Fragment, int, error) {
-	// Get total count
-	var total int
-	err := db.QueryRow("SELECT COUNT(*) FROM collected").Scan(&total)
-	if err != nil {
-		return nil, 0, fmt.Errorf("count collected failed: %w", err)
-	}
-
-	// Get paginated results
-	offset := (page - 1) * pageSize
+func LoadCollected() ([]model.Fragment, error) {
 	rows, err := db.Query(`
 		SELECT id, title, full_title, description, collected_at 
 		FROM collected 
-		ORDER BY full_title ASC 
-		LIMIT ? OFFSET ?
-	`, pageSize, offset)
+		ORDER BY full_title ASC
+	`)
 	if err != nil {
-		return nil, 0, fmt.Errorf("query collected failed: %w", err)
+		return nil, fmt.Errorf("query collected failed: %w", err)
 	}
 	defer rows.Close()
 
-	fragments := make([]Fragment, 0)
+	fragments := make([]model.Fragment, 0)
 	for rows.Next() {
-		var frag Fragment
+		var frag model.Fragment
 		var collectedAt string
 		if err := rows.Scan(&frag.ID, &frag.Title, &frag.FullTitle, &frag.Description, &collectedAt); err != nil {
-			return nil, 0, fmt.Errorf("scan fragment failed: %w", err)
+			return nil, fmt.Errorf("scan fragment failed: %w", err)
 		}
 		frag.CollectedAt = collectedAt
 		fragments = append(fragments, frag)
 	}
 
-	return fragments, total, nil
+	return fragments, nil
 }
 
-func dbSaveFragment(frag Fragment) (int64, error) {
+func LoadCollectedFullTitles() (map[string]bool, error) {
+	rows, err := db.Query("SELECT full_title FROM collected")
+	if err != nil {
+		return nil, fmt.Errorf("query collected full_title failed: %w", err)
+	}
+	defer rows.Close()
+
+	set := make(map[string]bool)
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			continue
+		}
+		set[t] = true
+	}
+	return set, nil
+}
+
+func SaveFragment(frag model.Fragment) (int64, error) {
 	result, err := db.Exec(`
 		INSERT INTO collected (title, full_title, description) 
 		VALUES (?, ?, ?)
@@ -129,7 +139,7 @@ func dbSaveFragment(frag Fragment) (int64, error) {
 	return id, nil
 }
 
-func dbClearCollected() error {
+func ClearCollected() error {
 	_, err := db.Exec("DELETE FROM collected")
 	if err != nil {
 		return fmt.Errorf("clear collected failed: %w", err)
@@ -139,7 +149,7 @@ func dbClearCollected() error {
 
 // Creation operations
 
-func dbLoadCreations(page, pageSize int) ([]Creation, int, error) {
+func LoadCreations(page, pageSize int) ([]model.Creation, int, error) {
 	// Get total count
 	var total int
 	err := db.QueryRow("SELECT COUNT(*) FROM creations").Scan(&total)
@@ -160,9 +170,9 @@ func dbLoadCreations(page, pageSize int) ([]Creation, int, error) {
 	}
 	defer rows.Close()
 
-	creations := make([]Creation, 0)
+	creations := make([]model.Creation, 0)
 	for rows.Next() {
-		var cre Creation
+		var cre model.Creation
 		var createdAt sql.NullString
 		if err := rows.Scan(&cre.ID, &cre.Content, &createdAt); err != nil {
 			return nil, 0, fmt.Errorf("scan creation failed: %w", err)
@@ -176,7 +186,7 @@ func dbLoadCreations(page, pageSize int) ([]Creation, int, error) {
 	return creations, total, nil
 }
 
-func dbSaveCreation(content string) (int64, string, error) {
+func SaveCreation(content string) (int64, string, error) {
 	var id int64
 	var createdAt string
 	err := db.QueryRow(
@@ -189,7 +199,7 @@ func dbSaveCreation(content string) (int64, string, error) {
 	return id, createdAt, nil
 }
 
-func dbClearCreations() error {
+func ClearCreations() error {
 	_, err := db.Exec("DELETE FROM creations")
 	if err != nil {
 		return fmt.Errorf("clear creations failed: %w", err)
@@ -199,7 +209,7 @@ func dbClearCreations() error {
 
 // Utility
 
-func closeDB() error {
+func Close() error {
 	if db == nil {
 		return nil
 	}

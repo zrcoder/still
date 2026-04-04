@@ -185,7 +185,7 @@ function playSubmit(): void {
     if (t > 0.3) hpF[i] *= (0.4 - t) / 0.1;
   }
   const buf = audio.ctx.createBuffer(1, n, sr);
-  buf.copyToChannel(hpF, 0);
+  buf.copyToChannel(hpF as Float32Array<ArrayBuffer>, 0);
   const g = audio.ctx.createGain();
   g.gain.value = audio.muted ? 0 : SFX_VOL;
   const s = audio.ctx.createBufferSource();
@@ -435,10 +435,12 @@ function setupRestart(): void {
     return;
   }
 
+  const overlayEl = overlay;
   function doRestart(): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).go.main.App.ResetGame()
       .then(() => {
+        overlayEl.classList.remove('is-active');
         collectedFragments.length = 0;
         todayFragments = [];
         (window as unknown as { _creationPage: number })._creationPage = 1;
@@ -449,11 +451,11 @@ function setupRestart(): void {
         (window as unknown as { _loadCreations: (page: number) => Promise<void> })._loadCreations(1);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return (window as any).go.main.App.GetFragments(1, 10) as Promise<PaginatedResult<Fragment>>;
+        return (window as any).go.main.App.GenFragment() as Promise<Fragment | null>;
       })
-      .then((result: PaginatedResult<Fragment> | undefined) => {
-        if (result && result.items && result.items.length > 0) {
-          todayFragments = result.items;
+      .then((frag: Fragment | null | undefined) => {
+        if (frag) {
+          todayFragments = [frag];
           renderFragments();
         }
       })
@@ -461,12 +463,12 @@ function setupRestart(): void {
         console.warn('Restart failed:', e);
       });
 
-    overlay.classList.remove('is-active');
+    overlayEl.classList.remove('is-active');
     syncFragmentsVisibility();
   }
 
   restartBtn.addEventListener('click', () => {
-    overlay.classList.add('is-active');
+    overlayEl.classList.add('is-active');
     syncFragmentsVisibility();
   });
 
@@ -479,7 +481,7 @@ function setupRestart(): void {
 
   if (cancelBtn) {
     cancelBtn.addEventListener('click', () => {
-      overlay.classList.remove('is-active');
+      overlayEl.classList.remove('is-active');
       syncFragmentsVisibility();
     });
   }
@@ -495,10 +497,10 @@ function setupRestart(): void {
 async function initFragmentSystem(): Promise<void> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (window as any).go.main.App.LoadCollected(1, 10) as PaginatedResult<CollectFragment>;
-    if (result && result.items) {
+    const items = await (window as any).go.main.App.LoadCollected() as CollectFragment[];
+    if (items) {
       collectedFragments.length = 0;
-      result.items.forEach((c) => {
+      items.forEach((c) => {
         collectedFragments.push({
           id: c.id,
           title: c.title,
@@ -513,12 +515,12 @@ async function initFragmentSystem(): Promise<void> {
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const today = await (window as any).go.main.App.GetFragments(1, 10) as PaginatedResult<Fragment>;
-    if (today && today.items && today.items.length > 0) {
-      todayFragments = today.items;
+    const frag = await (window as any).go.main.App.GenFragment() as Fragment | null;
+    if (frag) {
+      todayFragments = [frag];
     }
   } catch (e) {
-    console.warn('GetFragments failed:', e);
+    console.warn('GenFragment failed:', e);
   }
 
   renderFragments();
@@ -579,22 +581,24 @@ function setupEditor(): void {
   const btn = document.getElementById('submit-text');
   if (!editor || !counter || !btn) return;
 
+  const editorEl = editor;
+  const counterEl = counter;
   function updateState(): void {
-    const len = editor.textContent?.length || 0;
-    counter.textContent = Math.min(len, CHAR_LIMIT) + '/' + CHAR_LIMIT;
-    counter.style.color = len > CHAR_LIMIT ? 'var(--color-accent)' : '';
-    const content = editor.innerHTML.trim();
+    const len = editorEl.textContent?.length || 0;
+    counterEl.textContent = Math.min(len, CHAR_LIMIT) + '/' + CHAR_LIMIT;
+    counterEl.style.color = len > CHAR_LIMIT ? 'var(--color-accent)' : '';
+    const content = editorEl.innerHTML.trim();
     (btn as HTMLButtonElement).disabled = !content || content === '<br>';
   }
 
-  editor.addEventListener('input', updateState);
+  editorEl.addEventListener('input', updateState);
   updateState();
 
   btn.addEventListener('click', async () => {
     const audioSys = (window as unknown as { _audio: AudioSystem | undefined })._audio;
     if (audioSys) audioSys.ctx && playCollect();
 
-    const content = editor.innerHTML.trim();
+    const content = editorEl.innerHTML.trim();
     if (!content || content === '<br>') {
       return;
     }
@@ -609,8 +613,8 @@ function setupEditor(): void {
       console.warn('SaveCreation failed:', e);
     }
 
-    editor.innerHTML = '';
-    counter.textContent = '0/' + CHAR_LIMIT;
+    editorEl.innerHTML = '';
+    counterEl.textContent = '0/' + CHAR_LIMIT;
     updateState();
   });
 }
@@ -642,7 +646,9 @@ function setupImageUpload(): void {
       editor.appendChild(img);
       editor.focus();
       const counter = document.getElementById('char-count');
-      if (counter) counter.textContent = Math.min(editor.textContent?.length || 0, CHAR_LIMIT) + '/' + CHAR_LIMIT;
+      if (counter) {
+        counter.textContent = Math.min(editor.textContent?.length || 0, CHAR_LIMIT) + '/' + CHAR_LIMIT;
+      }
       (e.target as HTMLInputElement).value = '';
     }).catch((err: Error) => {
       alert('图片处理失败，请重试');
@@ -714,17 +720,7 @@ function renderCollection(items: CreationItem[], clear: boolean): void {
   });
 }
 
-async function clearCreations(): Promise<void> {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (window as any).go.main.App.ClearCreations() as void;
-  } catch (e) {
-    console.warn('ClearCreations failed:', e);
-  }
-  creationPage = 1;
-  totalCreations = 0;
-  loadCreations(1);
-}
+
 
 function renderPagination(): void {
   const container = document.getElementById('creation-pagination');
@@ -756,5 +752,4 @@ initCreationPanel();
 
 (window as unknown as { _creationPage: number })._creationPage = creationPage;
 (window as unknown as { _loadCreations: (page: number) => Promise<void> })._loadCreations = loadCreations;
-(window as unknown as { _clearCreations: () => Promise<void> })._clearCreations = clearCreations;
 (window as unknown as { _renderCollection: (items: CreationItem[], clear: boolean) => void })._renderCollection = renderCollection;
