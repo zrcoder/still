@@ -85,7 +85,7 @@ func LoadCollected() ([]model.Fragment, error) {
 	rows, err := db.Query(`
 		SELECT id, title, full_title, description, collected_at 
 		FROM collected 
-		ORDER BY full_title ASC
+		ORDER BY collected_at
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("query collected failed: %w", err)
