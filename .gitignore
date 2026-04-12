@@ -3,4 +3,3 @@ node_modules
 frontend/dist
 still
 xgo_autogen.go
-.DS_Store
