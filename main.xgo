@@ -10,27 +10,25 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-func main() {
-	app := new(App)
+app := new(App)
 
-	err := wails.Run(&options.App{
-		Title:  "文头字脑",
-		Width:  1400,
-		Height: 900,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
-		},
-		BackgroundColour: &options.RGBA{R: 245, G: 240, B: 232, A: 1},
-		OnStartup:        app.startup,
-		Bind: []any{
-			app,
-		},
-		Mac: &mac.Options{
-			TitleBar: mac.TitleBarDefault(),
-		},
-	})
+err := wails.Run(&options.App{
+	Title:  "文头字脑",
+	Width:  1400,
+	Height: 900,
+	AssetServer: &assetserver.Options{
+		Assets: assets,
+	},
+	BackgroundColour: &options.RGBA{R: 245, G: 240, B: 232, A: 1},
+	OnStartup:        app.startup,
+	Bind: []any{
+		app,
+	},
+	Mac: &mac.Options{
+		TitleBar: mac.TitleBarDefault(),
+	},
+})
 
-	if err != nil {
-		println "Error:", err.Error()
-	}
+if err != nil {
+	println "Error:", err.Error()
 }
