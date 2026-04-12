@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
+
 	"path/filepath"
 
 	"github.com/zrcoder/still/model"
@@ -13,25 +13,25 @@ import (
 var db *sql.DB
 
 func Init(dataDir string) error {
-	dbPath := filepath.Join(dataDir, "still.db")
+	dbPath := filepath.join(dataDir, "still.db")
 
-	dbInstance, err := sql.Open("sqlite3", "file:"+dbPath+"?_busy_timeout=5000&_foreign_keys=ON")
+	dbInstance, err := sql.open("sqlite3", "file:"+dbPath+"?_busy_timeout=5000&_foreign_keys=ON")
 	if err != nil {
-		return fmt.Errorf("open db failed: %w", err)
+		return errorf("open db failed: %w", err)
 	}
 
 	// SQLite only allows ONE writer at a time
-	dbInstance.SetMaxOpenConns(1)
-	dbInstance.SetMaxIdleConns(1)
+	dbInstance.setMaxOpenConns 1
+	dbInstance.setMaxIdleConns 1
 
-	if err := dbInstance.Ping(); err != nil {
-		return fmt.Errorf("ping db failed: %w", err)
+	if err := dbInstance.ping(); err != nil {
+		return errorf("ping db failed: %w", err)
 	}
 
 	db = dbInstance
 
 	if err := createTables(); err != nil {
-		return fmt.Errorf("create tables failed: %w", err)
+		return errorf("create tables failed: %w", err)
 	}
 
 	return nil
@@ -39,7 +39,7 @@ func Init(dataDir string) error {
 
 func createTables() error {
 	// Collected fragments table
-	_, err := db.Exec(`
+	_, err := db.exec(`
 		CREATE TABLE IF NOT EXISTS collected (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			title TEXT NOT NULL,
@@ -53,13 +53,13 @@ func createTables() error {
 	}
 
 	// Index on full_title for filtering
-	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_collected_full_title ON collected(full_title)`)
+	_, err = db.exec(`CREATE INDEX IF NOT EXISTS idx_collected_full_title ON collected(full_title)`)
 	if err != nil {
 		return err
 	}
 
 	// Creations table
-	_, err = db.Exec(`
+	_, err = db.exec(`
 		CREATE TABLE IF NOT EXISTS creations (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			content TEXT NOT NULL,
@@ -71,7 +71,7 @@ func createTables() error {
 	}
 
 	// Index on created_at for ordering
-	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_creations_date ON creations(created_at)`)
+	_, err = db.exec(`CREATE INDEX IF NOT EXISTS idx_creations_date ON creations(created_at)`)
 	if err != nil {
 		return err
 	}
@@ -82,22 +82,22 @@ func createTables() error {
 // Collected Fragment operations
 
 func LoadCollected() ([]model.Fragment, error) {
-	rows, err := db.Query(`
+	rows, err := db.query(`
 		SELECT id, title, full_title, description, collected_at 
 		FROM collected 
 		ORDER BY collected_at
 	`)
 	if err != nil {
-		return nil, fmt.Errorf("query collected failed: %w", err)
+		return nil, errorf("query collected failed: %w", err)
 	}
-	defer rows.Close()
+	defer rows.close()
 
 	fragments := make([]model.Fragment, 0)
-	for rows.Next() {
+	for rows.next() {
 		var frag model.Fragment
 		var collectedAt string
-		if err := rows.Scan(&frag.ID, &frag.Title, &frag.FullTitle, &frag.Description, &collectedAt); err != nil {
-			return nil, fmt.Errorf("scan fragment failed: %w", err)
+		if err := rows.scan(&frag.ID, &frag.Title, &frag.FullTitle, &frag.Description, &collectedAt); err != nil {
+			return nil, errorf("scan fragment failed: %w", err)
 		}
 		frag.CollectedAt = collectedAt
 		fragments = append(fragments, frag)
@@ -107,16 +107,16 @@ func LoadCollected() ([]model.Fragment, error) {
 }
 
 func LoadCollectedFullTitles() (map[string]bool, error) {
-	rows, err := db.Query("SELECT full_title FROM collected")
+	rows, err := db.query("SELECT full_title FROM collected")
 	if err != nil {
-		return nil, fmt.Errorf("query collected full_title failed: %w", err)
+		return nil, errorf("query collected full_title failed: %w", err)
 	}
-	defer rows.Close()
+	defer rows.close()
 
 	set := make(map[string]bool)
-	for rows.Next() {
+	for rows.next() {
 		var t string
-		if err := rows.Scan(&t); err != nil {
+		if err := rows.scan(&t); err != nil {
 			continue
 		}
 		set[t] = true
@@ -125,24 +125,24 @@ func LoadCollectedFullTitles() (map[string]bool, error) {
 }
 
 func SaveFragment(frag model.Fragment) (int64, error) {
-	result, err := db.Exec(`
+	result, err := db.exec(`
 		INSERT INTO collected (title, full_title, description) 
 		VALUES (?, ?, ?)
 	`, frag.Title, frag.FullTitle, frag.Description)
 	if err != nil {
-		return 0, fmt.Errorf("insert fragment failed: %w", err)
+		return 0, errorf("insert fragment failed: %w", err)
 	}
-	id, err := result.LastInsertId()
+	id, err := result.lastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("get last insert id failed: %w", err)
+		return 0, errorf("get last insert id failed: %w", err)
 	}
 	return id, nil
 }
 
 func ClearCollected() error {
-	_, err := db.Exec("DELETE FROM collected")
+	_, err := db.exec("DELETE FROM collected")
 	if err != nil {
-		return fmt.Errorf("clear collected failed: %w", err)
+		return errorf("clear collected failed: %w", err)
 	}
 	return nil
 }
@@ -152,30 +152,30 @@ func ClearCollected() error {
 func LoadCreations(page, pageSize int) ([]model.Creation, int, error) {
 	// Get total count
 	var total int
-	err := db.QueryRow("SELECT COUNT(*) FROM creations").Scan(&total)
+	err := db.queryRow("SELECT COUNT(*) FROM creations").scan(&total)
 	if err != nil {
-		return nil, 0, fmt.Errorf("count creations failed: %w", err)
+		return nil, 0, errorf("count creations failed: %w", err)
 	}
 
 	// Get paginated results
 	offset := (page - 1) * pageSize
-	rows, err := db.Query(`
+	rows, err := db.query(`
 		SELECT id, content, created_at 
 		FROM creations 
 		ORDER BY id DESC 
 		LIMIT ? OFFSET ?
 	`, pageSize, offset)
 	if err != nil {
-		return nil, 0, fmt.Errorf("query creations failed: %w", err)
+		return nil, 0, errorf("query creations failed: %w", err)
 	}
-	defer rows.Close()
+	defer rows.close()
 
 	creations := make([]model.Creation, 0)
-	for rows.Next() {
+	for rows.next() {
 		var cre model.Creation
 		var createdAt sql.NullString
-		if err := rows.Scan(&cre.ID, &cre.Content, &createdAt); err != nil {
-			return nil, 0, fmt.Errorf("scan creation failed: %w", err)
+		if err := rows.scan(&cre.ID, &cre.Content, &createdAt); err != nil {
+			return nil, 0, errorf("scan creation failed: %w", err)
 		}
 		if createdAt.Valid {
 			cre.CreatedAt = createdAt.String
@@ -189,20 +189,20 @@ func LoadCreations(page, pageSize int) ([]model.Creation, int, error) {
 func SaveCreation(content string) (int64, string, error) {
 	var id int64
 	var createdAt string
-	err := db.QueryRow(
+	err := db.queryRow(
 		"INSERT INTO creations (content) VALUES (?) RETURNING id, created_at",
 		content,
-	).Scan(&id, &createdAt)
+	).scan(&id, &createdAt)
 	if err != nil {
-		return 0, "", fmt.Errorf("insert creation failed: %w", err)
+		return 0, "", errorf("insert creation failed: %w", err)
 	}
 	return id, createdAt, nil
 }
 
 func ClearCreations() error {
-	_, err := db.Exec("DELETE FROM creations")
+	_, err := db.exec("DELETE FROM creations")
 	if err != nil {
-		return fmt.Errorf("clear creations failed: %w", err)
+		return errorf("clear creations failed: %w", err)
 	}
 	return nil
 }
@@ -213,5 +213,5 @@ func Close() error {
 	if db == nil {
 		return nil
 	}
-	return db.Close()
+	return db.close()
 }

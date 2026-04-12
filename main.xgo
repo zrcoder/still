@@ -1,5 +1,3 @@
-package main
-
 import (
 	"embed"
 
@@ -13,10 +11,8 @@ import (
 var assets embed.FS
 
 func main() {
-	// Create an instance of the app structure
 	app := new(App)
 
-	// Create application with options
 	err := wails.Run(&options.App{
 		Title:  "文头字脑",
 		Width:  1400,
@@ -35,6 +31,6 @@ func main() {
 	})
 
 	if err != nil {
-		println("Error:", err.Error())
+		println "Error:", err.Error()
 	}
 }

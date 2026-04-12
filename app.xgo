@@ -1,8 +1,6 @@
-package main
-
 import (
 	"context"
-	"fmt"
+
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -19,30 +17,30 @@ type App struct {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := os.userHomeDir()
 	if err != nil {
-		fmt.Printf("Failed to get home dir: %v\n", err)
+		printf "Failed to get home dir: %v\n", err
 		return
 	}
 
-	dataDir := filepath.Join(homeDir, ".still_wtzn")
+	dataDir := filepath.join(homeDir, ".still_wtzn")
 
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		fmt.Printf("Failed to create data dir: %v\n", err)
+	if err := os.mkdirAll(dataDir, 0755); err != nil {
+		printf "Failed to create data dir: %v\n", err
 		return
 	}
 
-	if err := db.Init(dataDir); err != nil {
-		fmt.Printf("Failed to init db: %v\n", err)
+	if err := db.init(dataDir); err != nil {
+		printf "Failed to init db: %v\n", err
 		return
 	}
 }
 
 func (a *App) ResetGame() error {
-	if err := db.ClearCreations(); err != nil {
+	if err := db.clearCreations(); err != nil {
 		return err
 	}
-	return db.ClearCollected()
+	return db.clearCollected()
 }
 
 var fragmentPool = []model.Fragment{
@@ -129,9 +127,9 @@ var fragmentPool = []model.Fragment{
 }
 
 func (a *App) GenFragment() (*model.Fragment, error) {
-	collectedSet, err := db.LoadCollectedFullTitles()
+	collectedSet, err := db.loadCollectedFullTitles()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load collected titles: %w", err)
+		return nil, errorf("failed to load collected titles: %w", err)
 	}
 	pool := make([]model.Fragment, 0, len(fragmentPool))
 	for _, frag := range fragmentPool {
@@ -142,34 +140,34 @@ func (a *App) GenFragment() (*model.Fragment, error) {
 	if len(pool) == 0 {
 		return nil, nil
 	}
-	seed := time.Now().UnixNano()
-	rng := rand.New(rand.NewPCG(uint64(seed), uint64(seed)))
-	idx := rng.IntN(len(pool))
+	seed := time.now().unixNano()
+	rng := rand.new(rand.newPCG(uint64(seed), uint64(seed)))
+	idx := rng.intN(len(pool))
 	frag := pool[idx]
-	frag.PositionX = 5 + rng.Float64()*60
-	frag.PositionY = 8 + rng.Float64()*75
-	frag.Angle = rng.Float64()*30 - 15
+	frag.PositionX = 5 + rng.float64()*60
+	frag.PositionY = 8 + rng.float64()*75
+	frag.Angle = rng.float64()*30 - 15
 	return &frag, nil
 }
 
 func (a *App) LoadCollected() ([]model.Fragment, error) {
-	return db.LoadCollected()
+	return db.loadCollected()
 }
 
 func (a *App) SaveFragment(frag model.Fragment) (int64, error) {
-	return db.SaveFragment(frag)
+	return db.saveFragment(frag)
 }
 
 func (a *App) LoadCreations(page, pageSize int) (*model.PaginatedResult, error) {
-	creations, total, err := db.LoadCreations(page, pageSize)
+	creations, total, err := db.loadCreations(page, pageSize)
 	if err != nil {
 		return nil, err
 	}
-	return model.PaginatedSlice(creations, total, page, pageSize), nil
+	return model.paginatedSlice(creations, total, page, pageSize), nil
 }
 
 func (a *App) SaveCreation(content string) (*model.Creation, error) {
-	id, createdAt, err := db.SaveCreation(content)
+	id, createdAt, err := db.saveCreation(content)
 	if err != nil {
 		return nil, err
 	}
