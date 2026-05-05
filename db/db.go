@@ -121,6 +121,9 @@ func LoadCollectedFullTitles() (map[string]bool, error) {
 		}
 		set[t] = true
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate collected rows failed: %w", err)
+	}
 	return set, nil
 }
 
